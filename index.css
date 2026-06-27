@@ -1,0 +1,113 @@
+/* 루트 로비 스타일시트 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  font-family: 'Jua', sans-serif;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: url('background_ref_1.jpg') no-repeat center center fixed;
+  background-size: cover;
+}
+
+#app-container {
+  width: 100%;
+  height: 100%;
+  max-width: 1024px;
+  max-height: 768px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 20px;
+  background: transparent;
+}
+
+.lobby-view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding-bottom: 110px; /* 상단 MATHCRAFT 로고 글씨 가림 방지를 위해 아래로 하강 */
+}
+
+.lobby-content {
+  width: 100%;
+  max-width: 380px; /* 슬롯 박스 크기 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.lobby-buttons {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lobby-btn {
+  font-family: 'Jua', sans-serif;
+  width: 100%;
+  padding: 14px 22px;
+  font-size: 20px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.lobby-btn .game-num {
+  font-size: 13px;
+  background: rgba(255,255,255,0.25);
+  padding: 3px 10px;
+  border-radius: 30px;
+  font-weight: bold;
+}
+
+/* 활성화 버튼 (게임 1) */
+.active-game-btn {
+  background: linear-gradient(135deg, #FF9F43 0%, #FF5252 100%);
+  color: #ffffff;
+  border: 2px solid rgba(255,255,255,0.3);
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+
+.active-game-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(255, 82, 82, 0.35);
+}
+
+.active-game-btn:active {
+  transform: translateY(1px);
+}
+
+/* 잠겨있는 버튼 (게임 2, 3) */
+.locked-game-btn {
+  background: rgba(0, 0, 0, 0.4);
+  color: rgba(255,255,255,0.3);
+  cursor: not-allowed;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: none;
+}

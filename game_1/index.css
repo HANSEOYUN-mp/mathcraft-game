@@ -1,0 +1,1255 @@
+/* 기본 리셋 및 글로벌 스타일 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  font-family: 'Jua', 'Nanum Gothic Coding', sans-serif;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.5s ease;
+  
+  /* 사용자 지정배경 background_ref_1.jpg 전체화면 커버 적용 */
+  background: url('background_ref_1.jpg') no-repeat center center fixed;
+  background-size: cover;
+}
+
+/* 전체 앱 컨테이너 (각 화면별로 반투명 레이어를 주도록 분리하여 투명 처리) */
+#app-container {
+  width: 100%;
+  height: 100%;
+  max-width: 1024px; /* 아이패드 가로 크기 타겟팅 */
+  max-height: 768px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 20px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+/* 꽃가루 효과용 캔버스 */
+#confetti-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ==========================================================================
+   📂 3-View (Lobby, Setup, Game) 구조 제어
+   ========================================================================== */
+.game-view {
+  display: none;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  animation: fadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.game-view.active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ==========================================================================
+   🏠 View 1: 메인 로비 화면 스타일 (Lobby View)
+   ========================================================================== */
+#view-lobby {
+  /* 배경 이미지에 이미 박힌 MATHCRAFT 로고를 확보하기 위해 버튼들을 하단으로 배치 */
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 80px;
+}
+
+.lobby-content {
+  width: 100%;
+  max-width: 380px; /* 슬롯 박스 너비 대폭 축소 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  /* 버튼들을 감싸는 아담한 크기의 반투명 글래스모피즘 슬롯 박스 적용 */
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* 3D MATHCRAFT 텍스트 로고 효과 */
+.lobby-logo {
+  font-size: 76px;
+  font-weight: 900;
+  text-align: center;
+  color: #FFD700;
+  text-shadow: 
+    0 2px 0 #dca400, 
+    0 4px 0 #b38500, 
+    0 6px 0 #8c6800, 
+    0 8px 0 #664c00,
+    0 12px 24px rgba(0, 0, 0, 0.6);
+  letter-spacing: 6px;
+  animation: logoBob 2.5s infinite ease-in-out alternate;
+  margin-bottom: 50px;
+}
+
+@keyframes logoBob {
+  0% { transform: translateY(0) rotate(-1deg); }
+  100% { transform: translateY(-8px) rotate(1deg); }
+}
+
+.lobby-buttons {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lobby-btn {
+  font-family: 'Jua', sans-serif;
+  width: 100%;
+  padding: 14px 22px;
+  font-size: 20px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.lobby-btn .game-num {
+  font-size: 13px;
+  background: rgba(255,255,255,0.25);
+  padding: 3px 10px;
+  border-radius: 30px;
+  font-weight: bold;
+}
+
+/* 활성화된 게임 1 버튼 (마인크래프트 감성 오렌지-옐로우) */
+.active-game-btn {
+  background: linear-gradient(135deg, #FF9F43 0%, #FF5252 100%);
+  color: #ffffff;
+  border: 2px solid rgba(255,255,255,0.3);
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+
+.active-game-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(255, 82, 82, 0.35);
+}
+
+.active-game-btn:active {
+  transform: translateY(1px);
+}
+
+/* 잠겨있는 게임 2, 3 버튼 (비활성화) */
+.locked-game-btn {
+  background: rgba(0, 0, 0, 0.4);
+  color: rgba(255,255,255,0.3);
+  cursor: not-allowed;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   ⚙️ View 2: 게임 1 설정 화면 스타일 (Setup View)
+   ========================================================================== */
+#view-setup {
+  max-width: 800px; 
+  margin: auto;
+  padding: 12px 20px; /* 패딩 축소 */
+  height: auto; /* 세로가 콘텐츠 양에 밀착되게 설정 */
+  align-self: center; /* 세로 중앙 배치 */
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 24px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+}
+
+.setup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px; /* 헤더 여백 축소 */
+}
+
+.setup-logo {
+  font-size: 26px; /* 로고 크기 축소 */
+  color: #FFD700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  letter-spacing: 2px;
+}
+
+/* 뒤로가기 버튼 */
+.nav-back-btn {
+  font-family: 'Jua', sans-serif;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 8px 16px; /* 패딩 축소 */
+  font-size: 14px; /* 글자 축소 */
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.nav-back-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: translateY(-2px);
+}
+
+/* 2열 Grid 구조 배치 (좌측 설정/Start 3개 상하배열 vs 우측 거대 Challenge) */
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 10px; /* 갭 축소 */
+  flex: 1;
+  align-items: stretch;
+  min-height: 0; 
+  max-width: 800px; 
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 좌측 1열 컨테이너 (세로 플렉스) */
+.setup-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* 간격 축소 */
+  justify-content: flex-start;
+}
+
+/* 설정 카드 공통 (전반적인 크기 축소) */
+.setup-panel-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px; /* 라운드 축소 */
+  padding: 8px 14px; /* 패딩 축소 */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 6px; /* 간격 축소 */
+}
+
+.panel-title {
+  font-size: 14px; /* 타이틀 폰트 축소 */
+  color: #2c3e50;
+  border-bottom: 2px dashed rgba(0,0,0,0.06);
+  padding-bottom: 4px;
+}
+
+/* 1. 묶음 선택 토글 버튼 그룹 */
+.setup-bundle-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.bundle-select-btn {
+  font-family: 'Jua', sans-serif;
+  flex: 1;
+  padding: 10px 12px; /* 패딩 축소 */
+  font-size: 16px; /* 폰트 크기 축소 */
+  font-weight: bold;
+  border: 2px solid #ddd;
+  border-radius: 10px; /* 라운드 반경 축소 */
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bundle-select-btn:hover {
+  border-color: #3498db;
+  transform: translateY(-2px);
+}
+
+.bundle-select-btn.active {
+  background: #3498db;
+  color: #fff;
+  border-color: #2980b9;
+  box-shadow: 0 3px 6px rgba(52, 152, 219, 0.25);
+}
+
+/* 2. 숫자 범위 설정 조절 패널 */
+.range-control-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* 간격 축소 */
+  flex-wrap: wrap;
+}
+
+.range-adjust-btn {
+  border: none;
+  background: #f1f2f6;
+  width: 36px; /* 크기 축소 */
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px; /* 크기 축소 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.range-adjust-btn:active {
+  transform: scale(0.9);
+}
+
+.range-slider-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* 간격 축소 */
+  min-width: 150px;
+}
+
+.range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px; /* 두께 축소 */
+  border-radius: 5px;
+  background: #dfe4ea;
+  outline: none;
+}
+
+/* 슬라이더 썸(Thumb) 스타일링 */
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; /* 크기 축소 */
+  height: 18px;
+  border-radius: 50%;
+  background: #2ed573;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: transform 0.1s ease;
+}
+
+.range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #a4b0be;
+  padding: 0 4px;
+}
+
+.range-value-display {
+  font-size: 15px; /* 크기 축소 */
+  font-weight: bold;
+  color: #2ed573;
+  min-width: 80px;
+  text-align: center;
+  background: #ebffeb;
+  padding: 4px 10px; /* 패딩 축소 */
+  border-radius: 10px;
+  border: 1px solid #c1f2c1;
+}
+
+.range-value-display #range-limit-text {
+  font-size: 20px; /* 크기 축소 */
+  color: #2ed573;
+}
+
+/* 3. Start 버튼 (학습 모드 - 세로 사이즈 축소) */
+.start-action-btn {
+  font-family: 'Jua', sans-serif;
+  width: 100%;
+  padding: 10px 14px; /* 패딩 축소 (기존 14px) */
+  font-size: 16px; /* 크기 축소 (기존 18px) */
+  color: #fff;
+  background: linear-gradient(135deg, #2ed573 0%, #1abc9c 100%);
+  border: none;
+  border-radius: 10px; /* 모서리 조절 */
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(46, 213, 115, 0.15);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.start-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(46, 213, 115, 0.25);
+}
+
+.start-action-btn:active {
+  transform: translateY(1px);
+}
+
+/* 우측 2열 컨테이너 (Challenge 버튼 단독 배치) */
+.setup-col-right {
+  display: flex;
+  align-items: stretch;
+}
+
+/* 4. Challenge 버튼 (세로 사이즈 대폭 축소) */
+.challenge-action-btn {
+  font-family: 'Jua', sans-serif;
+  width: 100%;
+  border: none;
+  border-radius: 14px; /* 모서리 조절 */
+  background: linear-gradient(135deg, #e84393 0%, #ff7675 100%);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px; /* 갭 축소 */
+  padding: 14px 18px; /* 패딩 축소 (기존 20px) */
+  box-shadow: 0 4px 10px rgba(232, 67, 147, 0.15);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.3);
+  border: 2px solid rgba(255,255,255,0.2);
+}
+
+.challenge-action-btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(232, 67, 147, 0.25);
+}
+
+.challenge-action-btn:active {
+  transform: translateY(1px);
+}
+
+.challenge-fire {
+  font-size: 32px; /* 크기 축소 (기존 48px) */
+  animation: fireWave 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes fireWave {
+  from { transform: scale(1); filter: drop-shadow(0 0 5px rgba(255,118,117,0.5)); }
+  to { transform: scale(1.15) rotate(3deg); filter: drop-shadow(0 0 10px #e84393); }
+}
+
+.challenge-title {
+  font-size: 22px; /* 크기 축소 (기존 28px) */
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+/* 5. 신규 디자인 테마 선택 토글 버튼 스타일 */
+.setup-theme-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-select-btn {
+  font-family: 'Jua', sans-serif;
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: bold;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.theme-select-btn:hover {
+  border-color: #3498db;
+  transform: translateY(-1px);
+}
+
+.theme-select-btn.active {
+  background: #3498db;
+  color: #fff;
+  border-color: #2980b9;
+  box-shadow: 0 3px 6px rgba(52, 152, 219, 0.25);
+}
+
+.challenge-desc {
+  font-size: 16px;
+  opacity: 0.9;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ==========================================================================
+   🎨 테마별 테마 변수 및 스타일
+   ========================================================================== */
+
+/* 1. 포커 카드 테마 */
+body.theme-poker {
+  --panel-bg: rgba(255, 255, 255, 0.9);
+  --panel-border: 3px solid #8B6B34; /* 나무 테이블 테두리 느낌 */
+  --accent-color: #E84545;
+  --accent-hover: #C92A2A;
+  --font-family: 'Jua', sans-serif;
+  --text-color: #1A1A1A;
+  --shadow-color: rgba(232, 69, 69, 0.2);
+  --item-bg-bundle: #E84545;
+  --item-bg-single: #4A5568;
+  --card-border-radius: 16px;
+}
+
+/* 2. 마인크래프트 광산 테마 */
+body.theme-minecraft {
+  --panel-bg: rgba(60, 60, 60, 0.95);
+  --panel-border: 4px solid #1a1a1a;
+  --accent-color: #55b748;
+  --accent-hover: #3f9234;
+  --font-family: 'Nanum Gothic Coding', monospace;
+  --text-color: #ffffff;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --item-bg-bundle: #866043;
+  --item-bg-single: #4dedf3;
+  --card-border-radius: 4px; /* 마크 테마는 각진 느낌 */
+}
+
+/* 3. 차분한 바둑 테마 */
+body.theme-baduk {
+  --panel-bg: rgba(255, 253, 247, 0.9);
+  --panel-border: 2px solid #8B6B34;
+  --accent-color: #3e3e3e;
+  --accent-hover: #1e1e1e;
+  --font-family: 'Jua', sans-serif;
+  --text-color: #2F2416;
+  --shadow-color: rgba(62, 62, 62, 0.15);
+  --item-bg-bundle: #D9A464;
+  --item-bg-single: #ffffff;
+  --card-border-radius: 12px;
+}
+
+/* 테마 기반으로 플레이 뷰 컨테이너 데코레이션 및 블러 박스 적용 */
+#view-game {
+  font-family: var(--font-family);
+  color: var(--text-color);
+
+  /* 게임 플레이 뷰 전용 반투명 글래스모피즘 보드 적용 */
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 32px;
+  padding: 20px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+}
+
+/* ==========================================================================
+   🎮 상단 헤더 영역 (테마 선택 & 점수판)
+   ========================================================================== */
+.game-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  z-index: 10;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lobby-exit-btn {
+  background: #f5f6fa !important;
+  color: #2f3542 !important;
+  border-color: #ced6e0 !important;
+}
+.lobby-exit-btn:hover {
+  background: #dfe4ea !important;
+}
+
+/* 테마 선택기 */
+.theme-selector {
+  display: flex;
+  gap: 8px;
+  background: var(--panel-bg);
+  padding: 4px;
+  border-radius: var(--card-border-radius);
+  border: var(--panel-border);
+}
+
+.theme-btn {
+  font-family: var(--font-family);
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-color);
+  cursor: pointer;
+  border-radius: calc(var(--card-border-radius) - 4px);
+  transition: all 0.2s ease;
+}
+
+/* 폰트 및 스타일 픽셀아트 느낌 변환 */
+.theme-minecraft .theme-btn {
+  font-size: 14px;
+  border: 2px solid transparent;
+}
+
+.theme-minecraft .theme-btn.active {
+  background: #55b748;
+  color: #fff;
+  border: 2px solid #1a1a1a;
+  box-shadow: inset -2px -2px 0px #35772c, inset 2px 2px 0px #79e36b;
+}
+
+.theme-poker .theme-btn.active {
+  background: #E84545;
+  color: #fff;
+  box-shadow: 0 4px 10px var(--shadow-color);
+}
+
+.theme-baduk .theme-btn.active {
+  background: #3e3e3e;
+  color: #fff;
+  box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+/* 헤더 통계 정보 */
+.header-stats {
+  display: flex;
+  gap: 8px;
+}
+
+.stat-badge {
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  padding: 8px 12px;
+  border-radius: var(--card-border-radius);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+/* 불타는 콤보 애니메이션 */
+.combo-badge {
+  animation: pulse 1.5s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 4px 8px var(--shadow-color); }
+  100% { transform: scale(1.05); box-shadow: 0 6px 15px var(--accent-color); }
+}
+
+.header-bottom {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 점수 표시판 */
+.score-board {
+  display: flex;
+  gap: 16px;
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  padding: 8px 16px;
+  border-radius: var(--card-border-radius);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.score-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.score-item .label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.score-item .value {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--accent-color);
+  text-shadow: 1px 1px 0px rgba(0,0,0,0.05);
+}
+
+.theme-minecraft .score-item .value {
+  color: #4dedf3;
+}
+
+/* ==========================================================================
+   🧑 캐릭터 영역 (문제 질문)
+   ========================================================================== */
+.character-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 0 10px;
+  z-index: 10;
+}
+
+.character-image {
+  font-size: 48px;
+  width: 68px;
+  height: 68px;
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  animation: bobbing 2s infinite ease-in-out;
+  overflow: hidden;
+}
+
+.theme-minecraft .character-image {
+  border-radius: 0px;
+  font-size: 40px;
+  animation: bobbing-pixel 1s infinite steps(2);
+}
+
+@keyframes bobbing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes bobbing-pixel {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.speech-bubble {
+  flex: 1;
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  border-radius: var(--card-border-radius);
+  padding: 12px 20px;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* 말풍선 꼬리 */
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 8px 12px 8px 0;
+  border-style: solid;
+  border-color: transparent var(--panel-bg) transparent transparent;
+  display: block;
+  width: 0;
+}
+
+#question-text {
+  font-size: 20px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.theme-minecraft #question-text {
+  font-size: 16px;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: var(--accent-color);
+  opacity: 0.9;
+  font-weight: bold;
+}
+
+.theme-minecraft .hint-text {
+  color: #4dedf3;
+}
+
+/* ==========================================================================
+   🧱 메인 비주얼라이저 (묶음 & 낱개)
+   ========================================================================== */
+.game-board {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.visualizer-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+
+.visualizer-container::-webkit-scrollbar {
+  width: 6px;
+}
+.visualizer-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.15);
+  border-radius: 10px;
+}
+
+.bundle-area-wrapper, .single-area-wrapper {
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  border-radius: var(--card-border-radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+
+.area-title {
+  font-size: 16px;
+  margin-bottom: 10px;
+  opacity: 0.8;
+  border-bottom: 2px dashed rgba(0,0,0,0.1);
+  padding-bottom: 6px;
+}
+
+.items-grid {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+/* 묶음 상자 정렬: 한 행에 무조건 5개씩 보이도록 5열 정렬 */
+.bundle-grid {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+/* 낱개 아이템 정렬: 알갱이들이 잘 흩어지도록 정렬 */
+.single-grid {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+/* 묶음 카드 오브젝트 */
+.bundle-box {
+  aspect-ratio: 1 / 1;
+  background: rgba(0,0,0,0.03);
+  border-radius: calc(var(--card-border-radius) - 6px);
+  border: 2px dashed rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.bundle-box:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.bundle-box:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* 묶음 내부 에셋 요소 */
+.bundle-asset {
+  font-size: 40px;
+  transition: transform 0.3s ease;
+}
+
+/* 묶음 상자 내 텍스트 라벨 (예: '10개묶음') */
+.bundle-label {
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 4px;
+  background: rgba(0,0,0,0.06);
+  padding: 2px 8px;
+  border-radius: 10px;
+  opacity: 0.8;
+}
+
+/* 상자가 클릭되어 열렸을 때 (Opened) */
+.bundle-box.opened {
+  background: rgba(255,255,255,0.4);
+  border: 2px solid var(--accent-color);
+  box-shadow: 0 4px 10px var(--shadow-color);
+}
+
+.bundle-box.opened .bundle-asset {
+  transform: scale(1.15) rotate(5deg);
+}
+
+.bundle-box.opened .bundle-label {
+  background: var(--accent-color);
+  color: #fff;
+  opacity: 1;
+}
+
+/* 묶음 펼침 시 사탕/광석/바둑알 정렬 미니 그리드 (상자 클릭 시 내부 10개 표시용 툴팁 팝오버) */
+.bundle-sub-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--panel-bg);
+  border-radius: calc(var(--card-border-radius) - 6px);
+  border: 2px solid var(--accent-color);
+  display: grid;
+  padding: 8px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  animation: zoomIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 5;
+}
+
+/* 2개입 분해 뷰: 1x2 그리드 */
+.grid-unit-2 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 5개입 분해 뷰: 1x5 그리드 */
+.grid-unit-5 {
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr;
+  gap: 4px;
+  align-items: center;
+}
+
+/* 10개입 분해 뷰: 2x5 그리드 */
+.grid-unit-10 {
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+}
+
+/* 16개입 분해 뷰: 4x4 그리드 */
+.grid-unit-16 {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 3px;
+  align-items: center;
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* 낱개 아이템 아이콘 */
+.single-item {
+  aspect-ratio: 1 / 1;
+  background: rgba(0,0,0,0.02);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 28px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.theme-minecraft .single-item {
+  border-radius: 0;
+  font-size: 22px;
+}
+
+.single-item:active {
+  transform: scale(0.9);
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* 세기 도우미 플로팅 숫자 */
+.count-bubble {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--accent-color);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  animation: popIn 0.15s ease-out;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* ==========================================================================
+   🦶 하단 푸터 영역 (선택지 리스트)
+   ========================================================================== */
+.game-footer {
+  margin-top: 14px;
+  z-index: 10;
+}
+
+.choices-container {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.choice-card {
+  flex: 1;
+  font-family: var(--font-family);
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  padding: 20px;
+  border-radius: var(--card-border-radius);
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--text-color);
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.06);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-minecraft .choice-card {
+  font-size: 24px;
+  padding: 16px;
+  box-shadow: 0 4px 0px #1a1a1a;
+  border: 4px solid #3c3c3c;
+  background: #555555;
+  color: #fff;
+}
+
+.theme-minecraft .choice-card:hover {
+  background: #777777;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0px #1a1a1a;
+}
+
+.theme-minecraft .choice-card:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+
+.choice-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 12px 20px var(--shadow-color);
+}
+
+.choice-card:active {
+  transform: translateY(2px) scale(0.98);
+}
+
+/* 정답 시 카드 피드백 */
+.choice-card.correct {
+  background: #4CAF50 !important;
+  color: #fff !important;
+  border-color: #388E3C !important;
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.5) !important;
+}
+
+/* 오답 시 카드 흔들림 & 색 피드백 */
+.choice-card.wrong {
+  background: #F44336 !important;
+  color: #fff !important;
+  border-color: #D32F2F !important;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+/* ==========================================================================
+   🏆 오버레이 (스테이지 클리어)
+   ========================================================================== */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.overlay-content {
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  border-radius: var(--card-border-radius);
+  padding: 32px 40px;
+  text-align: center;
+  max-width: 420px;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+  transform: scale(0.8);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.overlay.show .overlay-content {
+  transform: scale(1);
+}
+
+.victory-emoji {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: bounce 1s infinite alternate;
+}
+
+.overlay-content h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.overlay-content p {
+  font-size: 16px;
+  opacity: 0.9;
+  margin-bottom: 24px;
+}
+
+.next-stage-btn {
+  font-family: var(--font-family);
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px var(--shadow-color);
+  transition: all 0.2s ease;
+}
+
+.theme-minecraft .next-stage-btn {
+  border-radius: 0;
+  border: 4px solid #1a1a1a;
+  background: #55b748;
+}
+
+.next-stage-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.05);
+}
+
+@keyframes bounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-12px); }
+}
+
+/* ==========================================================================
+   📱 반응형 뷰포트 (태블릿 세로 및 작은 디바이스)
+   ========================================================================== */
+@media (max-width: 768px) {
+  #app-container {
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+    padding: 10px;
+  }
+  
+  .visualizer-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1.2fr 1fr;
+  }
+  
+  .character-image {
+    width: 52px;
+    height: 52px;
+    font-size: 32px;
+  }
+  
+  #question-text {
+    font-size: 16px;
+  }
+  
+  .choice-card {
+    padding: 14px;
+    font-size: 24px;
+  }
+}
+
+/* 포커 테마 전용 낱개 및 묶음 상자 스타일 최적화 */
+.theme-poker .single-item {
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  aspect-ratio: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.theme-poker .bundle-box {
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+}
+
+.theme-poker .bundle-box.opened {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid #E84545;
+  box-shadow: 0 4px 12px rgba(232, 69, 69, 0.3);
+}
+
+/* 광석/카드 테마 묶음 상자가 열렸을 때의 비주얼 피드백 필터 적용 */
+.theme-minecraft .bundle-box.opened .bundle-asset img {
+  filter: brightness(0.6) contrast(1.1); /* 어둡게 연출하여 개방된 상자 느낌 표현 */
+  transform: scale(0.9);
+  transition: all 0.25s ease;
+}
+
+.theme-poker .bundle-box.opened .bundle-asset img {
+  opacity: 0.45; /* 카드가 낱장으로 나갔으므로 덱은 투명하게 연출 */
+  transform: scale(0.92);
+  transition: all 0.25s ease;
+}

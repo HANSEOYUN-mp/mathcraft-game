@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <!-- 아이패드 등 모바일 디바이스에서 더블탭 줌 및 핀치 줌을 방지하여 네이티브 앱처럼 동작하게 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>MATHCRAFT - 묶음 수학 모험</title>
+  
+  <!-- 구글 폰트: 주아(Jua) 및 나눔고딕라운드 적용 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Gothic+Coding&display=swap" rel="stylesheet">
+  
+  <!-- CSS 스타일시트 -->
+  <link rel="stylesheet" href="index.css?v=2.3">
+</head>
+<body class="theme-poker"> <!-- 기본 테마: 카드 마술 -->
+
+  <!-- 전체 화면 컨테이너 -->
+  <div id="app-container">
+    
+    <!-- 꽃가루 애니메이션용 캔버스 -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- ==========================================================================
+       ⚙️ View 2: 게임 1 설정 화면 (Setup View)
+       ========================================================================== -->
+    <section class="game-view active" id="view-setup">
+      <div class="setup-header">
+        <button class="nav-back-btn" id="btn-back-to-lobby-from-setup">🏠 처음으로</button>
+        <h2 class="setup-logo">MATHCRAFT 설정</h2>
+      </div>
+
+      <div class="setup-grid">
+        <!-- 좌측 1열: 묶음선택, 숫자설정, Start 버튼 상하 배열 -->
+        <div class="setup-col-left">
+          
+          <!-- 1. 묶음 선택 패널 -->
+          <div class="setup-panel-card" id="setup-panel-bundle">
+            <h3 class="panel-title">📦 1. 어떤 묶음으로 공부할래?</h3>
+            <div class="setup-bundle-buttons">
+              <button class="bundle-select-btn" data-setup-bundle="2">2개씩</button>
+              <button class="bundle-select-btn" data-setup-bundle="5">5개씩</button>
+              <button class="bundle-select-btn active" data-setup-bundle="10">10개씩</button>
+              <button class="bundle-select-btn" data-setup-bundle="16">16개씩</button>
+            </div>
+          </div>
+
+          <!-- 2. 숫자 범위 설정 패널 -->
+          <div class="setup-panel-card" id="setup-panel-range">
+            <h3 class="panel-title">🔢 2. 숫자는 최대 몇 이하로 나오게 할까?</h3>
+            <div class="range-control-wrapper">
+              <button class="range-adjust-btn" id="btn-range-minus">➖</button>
+              <div class="range-slider-container">
+                <input type="range" min="10" max="100" step="5" value="80" class="range-slider" id="slider-range-limit">
+                <div class="slider-ticks">
+                  <span>10</span>
+                  <span>30</span>
+                  <span>50</span>
+                  <span>80</span>
+                  <span>100</span>
+                </div>
+              </div>
+              <button class="range-adjust-btn" id="btn-range-plus">➕</button>
+              
+              <!-- 설정된 숫자 크게 표기 -->
+              <div class="range-value-display">
+                <span id="range-limit-text">80</span> 이하
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 디자인 테마 선택 패널 -->
+          <div class="setup-panel-card" id="setup-panel-theme">
+            <h3 class="panel-title">🎨 3. 어떤 디자인으로 공부할래?</h3>
+            <div class="setup-theme-buttons">
+              <button class="theme-select-btn active" data-setup-theme="poker">🃏 카드 마술</button>
+              <button class="theme-select-btn" data-setup-theme="minecraft">🟩 마인크래프트</button>
+              <button class="theme-select-btn" data-setup-theme="baduk">⚫ 바둑판</button>
+            </div>
+          </div>
+
+          <!-- 4. Start 버튼 -->
+          <button class="setup-action-btn start-action-btn" id="btn-start-game1">
+            <span class="btn-icon">🏁</span> Start! (설정한 묶음으로 시작)
+          </button>
+
+        </div>
+
+        <!-- 우측 2열: Challenge 버튼 (세로 꽉 채움) -->
+        <div class="setup-col-right">
+          <button class="setup-action-btn challenge-action-btn" id="btn-challenge-game1">
+            <span class="challenge-fire">🔥</span>
+            <span class="challenge-title">Challenge!</span>
+            <span class="challenge-desc">2, 5, 10, 16 묶음이<br>섞여서 나오는 하이브리드 모드!</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+       🎮 View 3: 실제 게임 화면 (Play View)
+       ========================================================================== -->
+    <section class="game-view" id="view-game">
+      <!-- 상단 헤더: 테마 선택, 로비로 나가기 및 점수판 -->
+      <header class="game-header">
+        <div class="header-top">
+          <!-- 로비 나가기 -->
+          <div class="header-left-group">
+            <button class="nav-back-btn lobby-exit-btn" id="btn-back-to-lobby-from-game">🏠 처음으로</button>
+          </div>
+          
+          <!-- 콤보 & 트로피 정보 -->
+          <div class="header-stats">
+            <div class="stat-badge combo-badge" id="combo-display">
+              <span class="emoji">🔥</span> <span id="combo-count">0</span> 콤보!
+            </div>
+            <div class="stat-badge trophy-badge">
+              <span class="emoji">🏆</span> 트로피: <span id="trophy-count">0</span>개
+            </div>
+          </div>
+        </div>
+
+        <div class="header-bottom">
+          <!-- 점수 표시판 -->
+          <div class="score-board">
+            <div class="score-item">
+              <span class="label">내 점수</span>
+              <span class="value" id="current-score">0</span>
+            </div>
+            <div class="score-item">
+              <span class="label">최고 점수</span>
+              <span class="value" id="best-score">0</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- 메인 게임 보드 -->
+      <main class="game-board">
+        
+        <!-- 손님 캐릭터의 문제 질문 말풍선 -->
+        <div class="character-area">
+          <div class="character-image" id="character-avatar">🤖</div>
+          <div class="speech-bubble">
+            <p id="question-text">문제를 불러오는 중이에요...</p>
+            <span class="hint-text" id="hint-bubble-text">묶음 상자를 누르면 낱개로 쪼개져요!</span>
+          </div>
+        </div>
+
+        <!-- 시각적 교구 (묶음 및 낱개 렌더링 영역) -->
+        <div class="visualizer-container">
+          <!-- 묶음 영역 -->
+          <div class="bundle-area-wrapper">
+            <h3 class="area-title">🎁 묶음 묶음 (<span id="bundle-unit-display">10</span>개씩)</h3>
+            <div class="items-grid bundle-grid" id="bundle-container">
+              <!-- 동적으로 묶음 상자/병/바둑통 생성 -->
+            </div>
+          </div>
+
+          <!-- 낱개 영역 -->
+          <div class="single-area-wrapper">
+            <h3 class="area-title">🍬 남은 낱개</h3>
+            <div class="items-grid single-grid" id="single-container">
+              <!-- 동적으로 낱개 아이템 생성 -->
+            </div>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- 하단 선택지 영역 -->
+      <footer class="game-footer">
+        <div class="choices-container" id="choices-wrapper">
+          <!-- 동적으로 3개 보기 버튼 생성 -->
+        </div>
+      </footer>
+    </section>
+
+    <!-- 스테이지 클리어 축하 오버레이 -->
+    <div class="overlay" id="victory-overlay">
+      <div class="overlay-content">
+        <div class="victory-emoji">🎉🏆🎉</div>
+        <h2>스테이지 클리어!</h2>
+        <p>5문제를 모두 맞췄어요! 트로피 1개를 획득했습니다!</p>
+        <button class="next-stage-btn" id="btn-next-stage">다음 단계로 가기</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JS 로직 -->
+  <script src="index.js?v=2.3"></script>
+</body>
+</html>

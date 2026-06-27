@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>MATHCRAFT - 멀티 게임 로비</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="index.css?v=2.6">
+</head>
+<body>
+
+  <!-- 전체 화면 컨테이너 -->
+  <div id="app-container">
+    
+    <!-- 🏠 메인 로비 슬롯 박스 -->
+    <section class="lobby-view" id="view-lobby">
+      <div class="lobby-content">
+        <div class="lobby-buttons">
+          
+          <button class="lobby-btn active-game-btn" id="btn-play-game-1">
+            <span class="game-num">게임 1</span>
+            <span class="game-title">📦 묶음 조립 모험</span>
+          </button>
+          
+          <button class="lobby-btn active-game-btn" id="btn-play-game-2">
+            <span class="game-num">게임 2</span>
+            <span class="game-title">🔮 구십구 마스터: 숫자 마법사</span>
+          </button>
+          
+          <button class="lobby-btn locked-game-btn" disabled>
+            <span class="game-num">게임 3</span>
+            <span class="game-title">🔒 준비 중...</span>
+          </button>
+          
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="index.js?v=2.6"></script>
+</body>
+</html>
