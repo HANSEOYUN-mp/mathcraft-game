@@ -53,7 +53,19 @@ document.addEventListener('DOMContentLoaded', () => {
     solvedCount: 0,
     targetCount: 5,
     activeTimeout: null,
-    firstTry: true
+    firstTry: true,
+    // --- 배틀 모드 관련 필드 ---
+    currentStep: 1,       // 1: 10 가감(충전), 2: 보정(발사)
+    questionType: 'combo', // 'combo' (+9/-9, +8/-8) 또는 'direct' (+10/-10)
+    timerInterval: null,
+    timeLeft: 10,
+    wizardHP: 3,
+    monsterHP: 3,
+    originalNum: 0,
+    operator: '+',
+    operand: 9,
+    correctStepAnswer: 0,
+    tempResult: 0 // 1단계 성공 후 임시 저장값
   };
   
   const battleState = {
@@ -182,6 +194,13 @@ document.addEventListener('DOMContentLoaded', () => {
       clearTimeout(trainingState.activeTimeout);
       trainingState.activeTimeout = null;
     }
+    if (trainingState.timerInterval) {
+      clearInterval(trainingState.timerInterval);
+      trainingState.timerInterval = null;
+    }
+    if (trSpeechBubbleTimeoutMonster) clearTimeout(trSpeechBubbleTimeoutMonster);
+    if (trSpeechBubbleTimeoutWizard) clearTimeout(trSpeechBubbleTimeoutWizard);
+    
     // 캐릭터 아바타 토큰 제거 등 리셋 정리
     const existingToken = document.querySelector('.char-token');
     if (existingToken) existingToken.remove();
@@ -408,143 +427,242 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const trNum1 = document.getElementById('train-num1');
   const trOp = document.getElementById('train-op');
-  const trNum2 = document.getElementById('train-num2');
   const trBlank = document.getElementById('train-blank');
-  
   const trMonsterBubble = document.getElementById('monster-bubble');
   const trWizardBubble = document.getElementById('wizard-bubble');
   const trChoices = document.getElementById('training-choices');
-  const trGuideChain = document.getElementById('bubble-guide-chain');
   
+  const trTimerFill = document.getElementById('training-timer-fill');
+  const trTimerText = document.getElementById('training-timer-text');
+  const trMonsterHP = document.getElementById('monster-castle-hp');
+  const trWizardHP = document.getElementById('wizard-castle-hp');
+  const trMainProblem = document.getElementById('main-problem-display');
+  const trStepBadge1 = document.getElementById('step-badge-1');
+  const trStepBadge2 = document.getElementById('step-badge-2');
+  const trHelperHint = document.getElementById('helper-hint-text');
+  const trCannonball = document.getElementById('cannonball');
+  const trExplosion = document.getElementById('hit-explosion');
+  const trMonsterWrapper = document.getElementById('monster-castle-wrapper');
+  const trWizardWrapper = document.getElementById('wizard-castle-wrapper');
+  const trMonsterCannon = document.getElementById('monster-cannon');
+  const trWizardCannon = document.getElementById('wizard-cannon');
+
+  let trSpeechBubbleTimeoutMonster = null;
+  let trSpeechBubbleTimeoutWizard = null;
+
+  function showTrainingBubble(side, text) {
+    const bubble = side === 'monster' ? trMonsterBubble : trWizardBubble;
+    if (!bubble) return;
+    bubble.textContent = text;
+    bubble.classList.add('active');
+    
+    if (side === 'monster') {
+      if (trSpeechBubbleTimeoutMonster) clearTimeout(trSpeechBubbleTimeoutMonster);
+      trSpeechBubbleTimeoutMonster = setTimeout(() => bubble.classList.remove('active'), 3500);
+    } else {
+      if (trSpeechBubbleTimeoutWizard) clearTimeout(trSpeechBubbleTimeoutWizard);
+      trSpeechBubbleTimeoutWizard = setTimeout(() => bubble.classList.remove('active'), 3500);
+    }
+  }
+
   function setupTrainingMode() {
+    trainingState.wizardHP = 3;
+    trainingState.monsterHP = 3;
     trainingState.solvedCount = 0;
     trainingState.firstTry = true;
+    
+    updateHPDisplay();
+    
+    // 말풍선 대사 초기화
+    showTrainingBubble('wizard', '보수 마법 준비! 🧙‍♂️');
+    showTrainingBubble('monster', '대포로 날려주마! 😈');
+    
     generateTrainingQuestion();
   }
-  
-  // 랜덤 연습 문제 생성 (+9~+6, -9~-6)
+
+  function updateHPDisplay() {
+    if (trMonsterHP) trMonsterHP.textContent = '❤️'.repeat(Math.max(0, trainingState.monsterHP));
+    if (trWizardHP) trWizardHP.textContent = '❤️'.repeat(Math.max(0, trainingState.wizardHP));
+  }
+
+  function startTrainingTimer() {
+    if (trainingState.timerInterval) {
+      clearInterval(trainingState.timerInterval);
+    }
+    trainingState.timeLeft = 10;
+    updateTimerUI();
+    
+    trainingState.timerInterval = setInterval(() => {
+      trainingState.timeLeft -= 0.1;
+      if (trainingState.timeLeft <= 0) {
+        trainingState.timeLeft = 0;
+        updateTimerUI();
+        clearInterval(trainingState.timerInterval);
+        handleStepTimeout();
+      } else {
+        updateTimerUI();
+      }
+    }, 100);
+  }
+
+  function updateTimerUI() {
+    if (trTimerFill && trTimerText) {
+      const percentage = (trainingState.timeLeft / 10) * 100;
+      trTimerFill.style.width = `${percentage}%`;
+      trTimerText.textContent = `${Math.ceil(trainingState.timeLeft)}초`;
+    }
+  }
+
+  function handleStepTimeout() {
+    showTrainingBubble('monster', '시간 초과다! 받아라! 😈');
+    showTrainingBubble('wizard', '아앗! 시간이 없어! 🧙‍♂️');
+    fireCannon('monster');
+  }
+
   function generateTrainingQuestion() {
-    trainingState.firstTry = true;
-    trBlank.textContent = '?';
-    trBlank.className = 'eq-blank';
-    trGuideChain.innerHTML = '';
+    // 진행중인 타이머 정지
+    if (trainingState.timerInterval) {
+      clearInterval(trainingState.timerInterval);
+      trainingState.timerInterval = null;
+    }
+    if (trainingState.activeTimeout) {
+      clearTimeout(trainingState.activeTimeout);
+      trainingState.activeTimeout = null;
+    }
+
+    // 게임 종료 체크
+    if (trainingState.wizardHP <= 0) {
+      showGameoverOverlay();
+      return;
+    }
+    if (trainingState.monsterHP <= 0) {
+      showVictoryOverlay('훌륭해요! 몬스터 성을 부수고 보수 트레이닝을 마스터했습니다!', 1);
+      return;
+    }
+
+    // 문제 타입 난수 생성 (40% 확률로 direct(+10/-10), 60% 확률로 combo(+9/-9, +8/-8))
+    const isCombo = Math.random() < 0.6;
+    trainingState.questionType = isCombo ? 'combo' : 'direct';
+    trainingState.currentStep = 1;
     
-    // 문제 구성
-    const isPlus = Math.random() < 0.5;
-    const opVal = [6, 7, 8, 9][Math.floor(Math.random() * 4)];
-    
-    let num1, answer;
-    if (isPlus) {
-      // 덧셈의 경우 결과가 99 이하가 되도록 설정
-      num1 = Math.floor(Math.random() * 80) + 10; // 10 ~ 89
-      answer = num1 + opVal;
+    if (trStepBadge1) trStepBadge1.className = 'step-badge active';
+    if (trStepBadge2) trStepBadge2.className = 'step-badge';
+    if (trBlank) {
+      trBlank.textContent = '?';
+      trBlank.className = 'eq-blank active';
+      trBlank.style.color = '';
+    }
+
+    if (trainingState.questionType === 'direct') {
+      // +10, -10 연산
+      const isPlus = Math.random() < 0.5;
+      trainingState.operator = isPlus ? '+' : '-';
+      trainingState.operand = 10;
+      
+      if (isPlus) {
+        trainingState.originalNum = Math.floor(Math.random() * 90); // 0 ~ 89
+        trainingState.correctStepAnswer = trainingState.originalNum + 10;
+      } else {
+        trainingState.originalNum = Math.floor(Math.random() * 90) + 10; // 10 ~ 99
+        trainingState.correctStepAnswer = trainingState.originalNum - 10;
+      }
+      
+      // UI 표시
+      if (trMainProblem) trMainProblem.textContent = `${trainingState.originalNum} ${trainingState.operator} 10 = ?`;
+      if (trNum1) trNum1.textContent = trainingState.originalNum;
+      if (trOp) trOp.textContent = trainingState.operator;
+      
+      if (trStepBadge1) trStepBadge1.textContent = '1단계: 대포 발사! 🚀';
+      if (trStepBadge2) trStepBadge2.textContent = '(단독 문제)';
+      
+      if (trHelperHint) {
+        trHelperHint.textContent = isPlus 
+          ? `💡 힌트: ${trainingState.originalNum}에 10을 더해봐요! 십의 자리 숫자가 1 커져요!`
+          : `💡 힌트: ${trainingState.originalNum}에서 10을 빼봐요! 십의 자리 숫자가 1 작아져요!`;
+      }
+      
+      showTrainingBubble('monster', '10을 더하거나 빼보아라! 😈');
+      generateChoices(trainingState.correctStepAnswer);
+      
     } else {
-      // 뺄셈의 경우 결과가 1 이상이 되도록 설정
-      num1 = Math.floor(Math.random() * 80) + 15; // 15 ~ 94
-      answer = num1 - opVal;
+      // combo: +9, -9, +8, -8
+      const isPlus = Math.random() < 0.5;
+      trainingState.operator = isPlus ? '+' : '-';
+      trainingState.operand = Math.random() < 0.5 ? 9 : 8;
+      
+      if (isPlus) {
+        // 결과가 99 이하가 되도록 제한
+        trainingState.originalNum = Math.floor(Math.random() * (100 - trainingState.operand)); 
+        trainingState.correctStepAnswer = trainingState.originalNum + 10;
+      } else {
+        // 결과가 0 이상이 되도록 제한
+        trainingState.originalNum = Math.floor(Math.random() * (100 - trainingState.operand)) + trainingState.operand;
+        trainingState.correctStepAnswer = trainingState.originalNum - 10;
+      }
+      
+      if (trStepBadge1) trStepBadge1.textContent = '1단계: 대포 충전 🔋';
+      if (trStepBadge2) trStepBadge2.textContent = '2단계: 대포 발사! 🚀';
+      
+      if (trMainProblem) trMainProblem.textContent = `${trainingState.originalNum} ${trainingState.operator} ${trainingState.operand} = ?`;
+      if (trNum1) trNum1.textContent = trainingState.originalNum;
+      if (trOp) trOp.textContent = trainingState.operator;
+      
+      if (trHelperHint) {
+        trHelperHint.textContent = isPlus
+          ? `💡 힌트: ${trainingState.operand}을 더하기 위해 먼저 10을 더해볼까요?`
+          : `💡 힌트: ${trainingState.operand}을 빼기 위해 먼저 10을 빼볼까요?`;
+      }
+      
+      showTrainingBubble('monster', `어려울걸? ${trainingState.originalNum} ${trainingState.operator} ${trainingState.operand} 계산해봐! 😈`);
+      generateChoices(trainingState.correctStepAnswer);
     }
     
-    trainingState.currentQuestion = {
-      num1: num1,
-      op: isPlus ? '+' : '-',
-      num2: opVal,
-      answer: answer
-    };
-    
-    // UI 업데이트
-    trNum1.textContent = num1;
-    trOp.textContent = isPlus ? '+' : '-';
-    trNum2.textContent = opVal;
-    
-    trMonsterBubble.textContent = `받아라! ${isPlus ? num1 + '에 ' + opVal + '을 더해봐!' : num1 + '에서 ' + opVal + '을 빼봐!'}`;
-    trWizardBubble.textContent = `보수의 마법 콤보를 시전한다!`;
-    
-    // 마법 보수 가이드 애니메이션 체인 동작
-    renderBubbleChainGuide(num1, isPlus, opVal);
-    
-    // 정답 및 오답 보기 선택지 배치
-    generateTrainingChoices(answer);
+    startTrainingTimer();
   }
-  
-  // 콤보 애니메이션 가이드 렌더링
-  function renderBubbleChainGuide(start, isPlus, val) {
-    trGuideChain.innerHTML = '';
+
+  function startComboStep2() {
+    trainingState.currentStep = 2;
+    if (trStepBadge1) trStepBadge1.className = 'step-badge';
+    if (trStepBadge2) trStepBadge2.className = 'step-badge active';
+    if (trBlank) {
+      trBlank.textContent = '?';
+      trBlank.className = 'eq-blank active';
+    }
+
+    const isPlus = trainingState.operator === '+';
+    const correctionAmount = 10 - trainingState.operand;
+    const correctionOp = isPlus ? '-' : '+';
     
-    // 1단계 노드: 시작 수
-    const node1 = createGuideNode(start, 'start-node');
-    trGuideChain.appendChild(node1);
-    
-    // 2단계: 십의 자리 이동 연산
-    const op1 = isPlus ? '+10' : '-10';
-    const num2Val = isPlus ? start + 10 : start - 10;
-    
-    setTimeout(() => {
-      if (currentMode !== 'training') return;
-      trGuideChain.appendChild(createGuideArrow());
-      trGuideChain.appendChild(createGuideNode(op1, 'op-bubble'));
+    trainingState.tempResult = trainingState.correctStepAnswer;
+    trainingState.correctStepAnswer = isPlus 
+      ? trainingState.tempResult - correctionAmount 
+      : trainingState.tempResult + correctionAmount;
       
-      // 마법사 리액션
-      trWizardBubble.textContent = isPlus ? `우선 10을 더해봐! 십의 자리만 1 올라가니까 ${num2Val}!` : `우선 10을 빼봐! 십의 자리만 1 내려가니까 ${num2Val}!`;
-    }, 700);
+    if (trNum1) trNum1.textContent = trainingState.tempResult;
+    if (trOp) trOp.textContent = correctionOp;
     
-    // 3단계: 결과 수 10
-    setTimeout(() => {
-      if (currentMode !== 'training') return;
-      trGuideChain.appendChild(createGuideArrow());
-      trGuideChain.appendChild(createGuideNode(num2Val));
-    }, 1400);
+    if (trHelperHint) {
+      trHelperHint.textContent = isPlus
+        ? `💡 힌트: 10을 너무 많이 더했네요! 10보다 ${correctionAmount}만큼 덜 더해야 하니 ${correctionAmount}을 다시 빼줍시다.`
+        : `💡 힌트: 10을 너무 많이 뺐네요! 10보다 ${correctionAmount}만큼 덜 빼야 하니 ${correctionAmount}을 다시 더해줍시다.`;
+    }
     
-    // 4단계: 보정 연산 (+9인 경우 -1, -9인 경우 +1, +8은 -2 등)
-    const backAmount = 10 - val;
-    const op2 = isPlus ? `-${backAmount}` : `+${backAmount}`;
-    const finalVal = isPlus ? num2Val - backAmount : num2Val + backAmount;
-    
-    setTimeout(() => {
-      if (currentMode !== 'training') return;
-      trGuideChain.appendChild(createGuideArrow());
-      trGuideChain.appendChild(createGuideNode(op2, 'op-bubble'));
-      
-      trWizardBubble.textContent = isPlus 
-        ? `9보다 10을 더 많이 더했으니 다시 ${backAmount}을 빼자! 그럼 ${finalVal}!` 
-        : `9보다 10을 더 많이 뺐으니 다시 ${backAmount}을 더하자! 그럼 ${finalVal}!`;
-    }, 2100);
-    
-    // 5단계: 최종 정답 노드
-    setTimeout(() => {
-      if (currentMode !== 'training') return;
-      trGuideChain.appendChild(createGuideArrow());
-      const finalNode = createGuideNode(finalVal, 'start-node');
-      trGuideChain.appendChild(finalNode);
-      
-      trWizardBubble.textContent = `정답은 ${finalVal} 마법 장벽!`;
-    }, 2800);
+    showTrainingBubble('wizard', '대포 충전 완료! 보정 계산 조준 완료! 🧙‍♂️');
+    generateChoices(trainingState.correctStepAnswer);
+    startTrainingTimer();
   }
-  
-  function createGuideNode(text, className = '') {
-    const el = document.createElement('div');
-    el.className = `guide-step-node ${className}`;
-    el.textContent = text;
-    return el;
-  }
-  
-  function createGuideArrow() {
-    const el = document.createElement('span');
-    el.className = 'guide-step-arrow';
-    el.innerHTML = '➔';
-    return el;
-  }
-  
-  // 3지 선다 선택지 생성
-  function generateTrainingChoices(answer) {
+
+  function generateChoices(answer) {
+    if (!trChoices) return;
     trChoices.innerHTML = '';
     
     const candidates = [answer];
     
-    // 오답 생성 (중복 제거 및 1~99 범위 유지)
+    // 0 ~ 99 범위의 오답 생성
     while (candidates.length < 3) {
-      const offset = [-3, -2, -1, 1, 2, 3][Math.floor(Math.random() * 6)];
+      const offset = [-3, -2, -1, 1, 2, 3, -10, 10][Math.floor(Math.random() * 8)];
       const wrong = answer + offset;
-      if (wrong >= 1 && wrong <= 99 && !candidates.includes(wrong)) {
+      if (wrong >= 0 && wrong <= 99 && !candidates.includes(wrong)) {
         candidates.push(wrong);
       }
     }
@@ -558,7 +676,10 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.textContent = choice;
       
       const select = () => {
-        checkTrainingAnswer(choice, btn);
+        if (trainingState.timerInterval) {
+          clearInterval(trainingState.timerInterval);
+        }
+        checkAnswer(choice, btn);
       };
       
       btn.addEventListener('click', select);
@@ -570,72 +691,118 @@ document.addEventListener('DOMContentLoaded', () => {
       trChoices.appendChild(btn);
     });
   }
-  
-  function checkTrainingAnswer(selected, buttonEl) {
-    const q = trainingState.currentQuestion;
-    if (!q) return;
-    
-    if (selected === q.answer) {
+
+  function checkAnswer(selected, buttonEl) {
+    if (selected === trainingState.correctStepAnswer) {
       // 정답!
       buttonEl.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
       buttonEl.style.borderColor = '#2ecc71';
+      if (trBlank) {
+        trBlank.textContent = selected;
+        trBlank.className = 'eq-blank correct';
+        trBlank.style.color = '#2ecc71';
+      }
       
-      trBlank.textContent = q.answer;
-      trBlank.className = 'eq-blank correct';
-      trBlank.style.color = '#2ecc71';
-      
-      trMonsterBubble.textContent = `크아악! 마법 콤보에 맞았다!`;
-      trWizardBubble.textContent = `보수 공격 성공! 얍! 💫`;
-      
-      // 이펙트 및 정답 사운드 대체
-      triggerConfetti();
-      
-      if (trainingState.firstTry) {
-        // 첫 시도에 맞추면 콤보 및 점수 추가
-        comboCount++;
-        gameScore += 20;
+      if (trainingState.questionType === 'direct') {
+        // 단독 문제는 맞추면 바로 발사
+        showTrainingBubble('wizard', '정답이다! 마법 대포 발사! 🧙‍♂️');
+        showTrainingBubble('monster', '으아악! 벌써 계산을?! 😈');
+        fireCannon('wizard');
+      } else if (trainingState.currentStep === 1) {
+        // 콤보 1단계 정답: 충전 효과 및 2단계 이동
+        showTrainingBubble('wizard', '좋아, 충전 완료! 다음 단계로! 🧙‍♂️');
+        showTrainingBubble('monster', '방어막이 흔들리는군... 😈');
         
-        comboBadge.style.display = 'block';
-        comboCountDisplay.textContent = comboCount;
-      } else {
-        gameScore += 10;
-      }
-      
-      gameScoreDisplay.textContent = gameScore;
-      trainingState.solvedCount++;
-      
-      // 5문제를 해결하면 스테이지 클리어
-      if (trainingState.solvedCount >= trainingState.targetCount) {
+        // 대포 충전 애니메이션 (반동 효과 잠시 주고 바로 다음 단계)
+        if (trWizardCannon) {
+          trWizardCannon.classList.add('shoot');
+          setTimeout(() => trWizardCannon.classList.remove('shoot'), 400);
+        }
+        
         trainingState.activeTimeout = setTimeout(() => {
-          showVictoryOverlay(`훌륭해요! 5개의 보수 트레이닝을 마스터하여 마법 별 1개를 획득했습니다!`, 1);
-        }, 1500);
+          startComboStep2();
+        }, 1200);
       } else {
-        trainingState.activeTimeout = setTimeout(() => {
-          generateTrainingQuestion();
-        }, 1500);
+        // 콤보 2단계 정답: 발사!
+        showTrainingBubble('wizard', '콤보 슛! 받아라! 🧙‍♂️');
+        showTrainingBubble('monster', '크아악! 마법 포탄이다! 😈');
+        fireCannon('wizard');
       }
-      
     } else {
-      // 오답
+      // 오답!
       buttonEl.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
       buttonEl.style.borderColor = '#e74c3c';
       
-      trainingState.firstTry = false;
-      comboCount = 0;
-      comboBadge.style.display = 'none';
+      showTrainingBubble('monster', '낄낄! 틀렸구나! 대포 발사! 😈');
+      showTrainingBubble('wizard', '으아악! 잘못 계산했어! 🧙‍♂️');
       
-      trMonsterBubble.textContent = `메롱! 틀렸지롱! 다시 계산해봐!`;
-      
-      // 친절한 가이드 힌트 구성
-      const isPlus = q.op === '+';
-      const back = 10 - q.num2;
-      
-      if (isPlus) {
-        trWizardBubble.textContent = `💡 힌트: ${q.num1}에 10을 더해 20대 숫자를 만든 다음 ${back}을 빼봐!`;
-      } else {
-        trWizardBubble.textContent = `💡 힌트: ${q.num1}에서 10을 뺀 다음 10보다 덜 뺐으니 ${back}을 더해봐!`;
-      }
+      fireCannon('monster');
     }
+  }
+
+  function fireCannon(attacker) {
+    // 버튼 비활성화
+    const choiceButtons = trChoices.querySelectorAll('.choice-btn');
+    choiceButtons.forEach(btn => btn.disabled = true);
+
+    const isWizard = attacker === 'wizard';
+    const activeCannon = isWizard ? trWizardCannon : trMonsterCannon;
+    
+    // 대포 반동 효과
+    if (activeCannon) {
+      activeCannon.classList.add('shoot');
+      setTimeout(() => activeCannon.classList.remove('shoot'), 400);
+    }
+    
+    // 대포알 활성화 및 날아가는 방향 설정
+    if (trCannonball) {
+      trCannonball.className = isWizard ? 'cannonball fly-to-monster' : 'cannonball fly-to-wizard';
+    }
+
+    // 0.8초 후 피격 연출
+    trainingState.activeTimeout = setTimeout(() => {
+      if (trCannonball) {
+        trCannonball.className = 'cannonball'; // 리셋
+      }
+
+      // 폭발 좌표 지정 및 활성화
+      if (trExplosion) {
+        trExplosion.style.left = isWizard ? '85px' : 'calc(100% - 95px)';
+        trExplosion.style.top = '120px';
+        trExplosion.classList.add('active');
+        setTimeout(() => trExplosion.classList.remove('active'), 500);
+      }
+
+      // 성 흔들림 효과
+      const targetWrapper = isWizard ? trMonsterWrapper : trWizardWrapper;
+      if (targetWrapper) {
+        targetWrapper.classList.add('shake');
+        setTimeout(() => targetWrapper.classList.remove('shake'), 500);
+      }
+
+      // HP 차감 및 UI 업데이트
+      if (isWizard) {
+        trainingState.monsterHP--;
+        comboCount++;
+        gameScore += 20;
+        if (comboBadge && comboCountDisplay) {
+          comboBadge.style.display = 'block';
+          comboCountDisplay.textContent = comboCount;
+        }
+        triggerConfetti(30);
+      } else {
+        trainingState.wizardHP--;
+        comboCount = 0;
+        if (comboBadge) comboBadge.style.display = 'none';
+      }
+      updateHPDisplay();
+      if (gameScoreDisplay) gameScoreDisplay.textContent = gameScore;
+
+      // 다음 라운드 지연 전환
+      trainingState.activeTimeout = setTimeout(() => {
+        generateTrainingQuestion();
+      }, 1500);
+    }, 800);
   }
   
   

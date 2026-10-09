@@ -140,32 +140,69 @@
         <!-- ⚡ 모드 2: 마법사의 보수 트레이닝 뷰 -->
         <div class="mode-panel-view" id="panel-training" style="display: none;">
           <div class="training-layout">
-            <!-- 몬스터 vs 마법사 연출 구역 -->
-            <div class="battle-stage">
-              <div class="monster-side">
-                <div class="monster-avatar" id="monster-avatar">😈</div>
-                <div class="monster-balloon" id="monster-bubble">계산해 보아라!</div>
+            <!-- ⏱️ 10초 타이머 영역 -->
+            <div class="battle-timer-container">
+              <span class="timer-icon">⏳</span>
+              <div class="battle-timer-bar">
+                <div class="battle-timer-fill" id="training-timer-fill" style="width: 100%;"></div>
               </div>
-              
-              <div class="wizard-side">
-                <div class="wizard-balloon" id="wizard-bubble">덤벼라!</div>
-                <div class="wizard-avatar" id="wizard-avatar">🧙‍♂️</div>
+              <span class="timer-text" id="training-timer-text">10초</span>
+            </div>
+
+            <!-- ⚔️ 몬스터 vs 마법사 대포 성 배틀 스테이지 -->
+            <div class="cannon-battle-stage">
+              <!-- 😈 몬스터 측 성 (왼쪽) -->
+              <div class="castle-side monster-castle" id="monster-castle-wrapper">
+                <div class="castle-hp" id="monster-castle-hp">❤️❤️❤️</div>
+                <div class="castle-balloon" id="monster-bubble">덤벼라! 😈</div>
+                <div class="castle-graphic">
+                  <div class="castle-tower monster-tower">😈</div>
+                  <div class="castle-wall monster-wall"></div>
+                  <div class="castle-cannon monster-cannon" id="monster-cannon">💥</div>
+                </div>
+              </div>
+
+              <!-- ☄️ 포탄 비행구역 및 이펙트 -->
+              <div class="battle-sky" id="battle-sky">
+                <div class="cannonball" id="cannonball"></div>
+                <div class="hit-explosion" id="hit-explosion">💥</div>
+              </div>
+
+              <!-- 🧙‍♂️ 마법사 측 성 (오른쪽) -->
+              <div class="castle-side wizard-castle" id="wizard-castle-wrapper">
+                <div class="castle-hp" id="wizard-castle-hp">❤️❤️❤️</div>
+                <div class="castle-balloon" id="wizard-bubble">보수 공격 준비! 🧙‍♂️</div>
+                <div class="castle-graphic">
+                  <div class="castle-tower wizard-tower">🧙‍♂️</div>
+                  <div class="castle-wall wizard-wall"></div>
+                  <div class="castle-cannon wizard-cannon" id="wizard-cannon">⚡</div>
+                </div>
               </div>
             </div>
 
-            <!-- 문제 및 가이드 버블 콤보 구역 -->
+            <!-- 📝 문제 및 학습 도우미 말풍선 -->
             <div class="quest-and-bubble-section">
-              <div class="equation-box">
-                <span id="train-num1">15</span>
-                <span id="train-op">+</span>
-                <span id="train-num2">9</span>
-                <span>=</span>
-                <span class="eq-blank" id="train-blank">?</span>
+              <!-- 현재 콤보 단계 표시기 (예: 1단계: 대포 충전 / 2단계: 발사!) -->
+              <div class="step-indicator" id="training-step-indicator">
+                <span class="step-badge active" id="step-badge-1">1단계: 대포 충전 🔋</span>
+                <span class="step-badge" id="step-badge-2">2단계: 대포 발사 🚀</span>
               </div>
 
-              <!-- 보조 가이드 애니메이션 버블 체인 -->
-              <div class="bubble-guide-chain" id="bubble-guide-chain">
-                <!-- 예: [15] -> [+10] -> [25] -> [-1] -> [24]가 동적으로 애니메이션 렌더링됨 -->
+              <!-- 학습 도우미 힌트 메시지 -->
+              <div class="helper-hint-box" id="helper-hint-text">
+                35에서 9를 더하기 위해 먼저 10을 더해봅시다!
+              </div>
+
+              <div class="equation-box">
+                <!-- 전체 연산 문제 (예: 35 - 9 = ?) -->
+                <div class="main-problem-text" id="main-problem-display">35 - 9 = ?</div>
+                
+                <!-- 현재 풀고 있는 단계식 (예: 35 - [ ? ] = 25) -->
+                <div class="step-equation-box" id="step-equation-display">
+                  <span id="train-num1">35</span>
+                  <span id="train-op">-</span>
+                  <span class="eq-blank active" id="train-blank">?</span>
+                </div>
               </div>
             </div>
 
