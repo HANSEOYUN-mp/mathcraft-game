@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Lobby from './components/Lobby.jsx';
-import Game1 from './components/Game1/Game1Setup.jsx';
-import Game2 from './components/Game2/Game2Setup.jsx';
 import Game3 from './components/Game3/Game3Setup.jsx';
 import Confetti from './components/Confetti.jsx';
 
@@ -40,7 +38,7 @@ function App() {
 
   return (
     <div 
-      style={{ backgroundImage: "url('/images/background_ref_1.jpg')" }}
+      style={{ backgroundImage: "url('/images/background_yohan.png')" }}
       className="min-h-screen w-full bg-slate-950 bg-cover bg-center bg-no-repeat text-white flex flex-col font-jua select-none relative overflow-hidden"
     >
       {/* Confetti canvas */}
@@ -52,28 +50,6 @@ function App() {
           setCurrentView={setCurrentView} 
           trophies={trophies} 
           score={score} 
-        />
-      )}
-
-      {currentView === 'game1' && (
-        <Game1 
-          onBack={() => setCurrentView('lobby')} 
-          addTrophy={addTrophy}
-          triggerConfetti={triggerConfetti}
-          score={score}
-          setScore={setScore}
-          trophies={trophies}
-        />
-      )}
-
-      {currentView === 'game2' && (
-        <Game2 
-          onBack={() => setCurrentView('lobby')} 
-          addTrophy={addTrophy}
-          triggerConfetti={triggerConfetti}
-          score={score}
-          setScore={setScore}
-          trophies={trophies}
         />
       )}
 
